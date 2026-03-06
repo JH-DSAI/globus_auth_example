@@ -22,14 +22,14 @@ The app implements the [OAuth 2.0 Authorization Code flow](https://docs.globus.o
 
 ```bash
 # 1. Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # 2. Configure environment variables
 cp .env.example .env
 # Edit .env with your GLOBUS_CLIENT_ID, GLOBUS_CLIENT_SECRET, and SESSION_SECRET_KEY
 
 # 3. Run the server
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 Open <http://localhost:8000> in your browser and click **Login with Globus**.

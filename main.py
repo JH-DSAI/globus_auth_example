@@ -142,46 +142,59 @@ def login(request: Request) -> RedirectResponse:
     session, then redirects the browser to the Globus Auth authorization
     endpoint.
     """
+    state = secrets.token_urlsafe(32)
+
     auth_client = _build_auth_client()
     auth_client.oauth2_start_flow(
         redirect_uri=REDIRECT_URI,
         requested_scopes=REQUESTED_SCOPES,
+        state=state,
     )
-    state = secrets.token_urlsafe(32)
-    request.session["oauth_state"] = state
-    authorize_url = auth_client.oauth2_get_authorize_url(state=state)
-    return RedirectResponse(url=str(authorize_url))
 
+    response = RedirectResponse(url=str(auth_client.oauth2_get_authorize_url()))
+    # Store the state in a cookie
+    # https://www.starlette.dev/responses/#set-cookie
+    response.set_cookie(
+        "oauth_state",
+        state,
+        max_age=os.environ.get("SESSION_COOKIE_MAX_AGE_SECONDS", 3600),
+        path="/",
+        secure=os.environ.get("SESSION_COOKIE_SECURE", True),
+        httponly=True,
+        samesite=os.environ.get("SESSION_COOKIE_SAMESITE", "strict")
+    )
+
+    return response
 
 @app.get("/callback")
 def callback(
     request: Request,
     code: str | None = None,
     state: str | None = None,
-    error: str | None = None,
-    error_description: str | None = None,
 ) -> RedirectResponse:
-    """OAuth 2.0 callback – exchange the authorization code for tokens.
+    """OAuth 2.0 callback - exchange the authorization code for tokens.
 
     Validates the ``state`` parameter against the value stored in the session
     to prevent CSRF attacks, then exchanges the authorization code for tokens
     and stores the decoded identity claims and token metadata in the session.
     """
-    if error:
-        detail = error_description or error
-        raise HTTPException(status_code=400, detail=f"Globus Auth error: {detail}")
-
     if not code:
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
-    stored_state = request.session.pop("oauth_state", None)
+    stored_state = request.cookies.get("oauth_state")
+    print("Stored State: ", stored_state)
+    print("State: ", state)
+
     if not state or state != stored_state:
         raise HTTPException(
             status_code=400,
-            detail="Invalid or missing OAuth state – possible CSRF attempt",
+            detail="Invalid or missing OAuth state - possible CSRF attempt",
         )
 
     auth_client = _build_auth_client()
+    # https://docs.globus.org/api/auth/developer-guide/#obtaining-authorization
+    # src:
+    # https://github.com/globus/globus-sdk-python/blob/73e9acd4b74e85a73aeccd5d8221436758a46bef/src/globus_sdk/services/auth/client/native_client.py#L56
     auth_client.oauth2_start_flow(
         redirect_uri=REDIRECT_URI,
         requested_scopes=REQUESTED_SCOPES,
