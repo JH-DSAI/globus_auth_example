@@ -1,27 +1,4 @@
-"""FastAPI prototype demonstrating OAuth 2.0 login via Globus Auth.
-
-Prerequisites
--------------
-1. Register a **Confidential App** at https://app.globus.org/settings/developers
-2. Add ``http://localhost:8000/callback`` as an allowed redirect URL.
-3. Copy ``.env.example`` to ``.env`` and fill in ``GLOBUS_CLIENT_ID``,
-   ``GLOBUS_CLIENT_SECRET``, and ``SESSION_SECRET_KEY``.
-
-Running
--------
-::
-
-    pip install -r requirements.txt
-    uvicorn main:app --reload
-
-Dependencies
-------------
-* ``globus-sdk`` – Globus Auth OAuth2 client (primary OAuth implementation).
-* ``authlib``    – Included for its JWT/OIDC utilities and as an alternative
-                   OAuth2 client when Globus-specific helpers are not required.
-* ``fastapi``    – ASGI web framework.
-* ``itsdangerous`` – Signed-cookie sessions (via Starlette's SessionMiddleware).
-"""
+"""FastAPI prototype demonstrating OAuth 2.0 login via Globus Auth."""
 
 import logging
 import os
@@ -40,7 +17,6 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-
 GLOBUS_CLIENT_ID: str = os.environ.get("GLOBUS_CLIENT_ID", "")
 GLOBUS_CLIENT_SECRET: str = os.environ.get("GLOBUS_CLIENT_SECRET", "")
 REDIRECT_URI: str = os.environ.get("REDIRECT_URI", "http://localhost:8000/callback")
@@ -53,13 +29,9 @@ if not SESSION_SECRET_KEY:
         "Set SESSION_SECRET_KEY in your .env file for persistent sessions."
     )
 
-# Globus Auth scopes – ``openid`` enables the ID token; ``profile`` and
+# Globus Auth scopes - ``openid`` enables the ID token; ``profile`` and
 # ``email`` add name/preferred_username and email claims respectively.
 REQUESTED_SCOPES: str = "openid profile email"
-
-# ---------------------------------------------------------------------------
-# App setup
-# ---------------------------------------------------------------------------
 
 app = FastAPI(title="Globus OAuth Login Prototype")
 
@@ -68,13 +40,8 @@ app = FastAPI(title="Globus OAuth Login Prototype")
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET_KEY,
-    https_only=False,
+    https_only=os.getenv("SESSION_COOKIE_HTTPS_ONLY", "true").lower() in ("true", "1", "t"),
 )
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def _build_auth_client() -> globus_sdk.ConfidentialAppAuthClient:
@@ -97,14 +64,9 @@ def _build_auth_client() -> globus_sdk.ConfidentialAppAuthClient:
     )
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
-
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
-    """Home page – shows the current login status."""
+    """Home page - shows the current login status."""
     user_info = request.session.get("user_info")
     if user_info:
         name = user_info.get("name") or user_info.get("preferred_username", "Unknown")
@@ -157,11 +119,11 @@ def login(request: Request) -> RedirectResponse:
     response.set_cookie(
         "oauth_state",
         state,
-        max_age=os.environ.get("SESSION_COOKIE_MAX_AGE_SECONDS", 3600),
+        max_age=int(os.environ.get("SESSION_COOKIE_MAX_AGE_SECONDS", 3600)),
         path="/",
-        secure=os.environ.get("SESSION_COOKIE_SECURE", True),
+        secure=os.environ.get("SESSION_COOKIE_SECURE", "true").lower() in ("true", "1", "t"),
         httponly=True,
-        samesite=os.environ.get("SESSION_COOKIE_SAMESITE", "strict")
+        samesite=os.environ.get("SESSION_COOKIE_SAMESITE", "lax")
     )
 
     return response
@@ -182,8 +144,9 @@ def callback(
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
     stored_state = request.cookies.get("oauth_state")
-    print("Stored State: ", stored_state)
-    print("State: ", state)
+
+    print("state: ", state)
+    print("stored_state: ", stored_state)
 
     if not state or state != stored_state:
         raise HTTPException(
