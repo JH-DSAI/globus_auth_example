@@ -113,20 +113,9 @@ def login(request: Request) -> RedirectResponse:
         state=state,
     )
 
-    response = RedirectResponse(url=str(auth_client.oauth2_get_authorize_url()))
-    # Store the state in a cookie
-    # https://www.starlette.dev/responses/#set-cookie
-    response.set_cookie(
-        "oauth_state",
-        state,
-        max_age=int(os.environ.get("SESSION_COOKIE_MAX_AGE_SECONDS", 3600)),
-        path="/",
-        secure=os.environ.get("SESSION_COOKIE_SECURE", "true").lower() in ("true", "1", "t"),
-        httponly=True,
-        samesite=os.environ.get("SESSION_COOKIE_SAMESITE", "lax")
-    )
+    request.session["oauth_state"] = state
 
-    return response
+    return RedirectResponse(url=str(auth_client.oauth2_get_authorize_url()))
 
 @app.get("/callback")
 def callback(
@@ -143,7 +132,7 @@ def callback(
     if not code:
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
-    stored_state = request.cookies.get("oauth_state")
+    stored_state = request.session.pop("oauth_state", None)
 
     print("state: ", state)
     print("stored_state: ", stored_state)
