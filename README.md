@@ -1,16 +1,18 @@
 # globus_auth_example
 
-A simple FastAPI prototype that demonstrates OAuth 2.0 login via [Globus Auth](https://docs.globus.org/api/auth/).
+A simple FastAPI prototype that demonstrates OAuth 2.0 login via [Globus
+Auth](https://docs.globus.org/api/auth/).
 
 ## How it works
 
 The app implements the [OAuth 2.0 Authorization Code flow](https://docs.globus.org/api/auth/developer-guide/#obtaining-authorization):
 
 1. **`GET /`** – Home page. Shows login status.
-2. **`GET /login`** – Redirects the browser to the Globus Auth authorization endpoint with a random `state` token (CSRF protection).
-3. **`GET /callback`** – Handles the redirect from Globus Auth. Validates the `state`, exchanges the authorization code for tokens via the Globus SDK, decodes the OIDC ID token for user identity claims, and stores everything in a signed session cookie.
-4. **`GET /profile`** – Protected route. Returns user identity and resource-server token metadata as JSON.
-5. **`GET /logout`** – Revokes the Globus access tokens and clears the session.
+2. **`GET /login/{proivder}`** – Redirects the browser to the provider's login.
+3. **`GET /callback`** – Handles the redirect from thr provider's Auth.
+4. **`GET /profile`** – Protected route. Returns user identity and
+   resource-server token metadata as JSON.
+5. **`GET /logout`** – Logs the user out by removing the token.
 
 ## Step 1: Register a Globus App
 
@@ -45,8 +47,8 @@ When you are done filling out the form click "Register Application"
 
 
 Now you should be at the details screen for your application. In order to
-implement the authorization flow you need to create a secret for your app.
-Click "Add Client Secret"
+implement the authorization flow you need to create a secret for your app. Click
+"Add Client Secret"
 
 ![app-menu](docs/globus-project-app-view.png)
 
@@ -54,9 +56,9 @@ Enter a name for your secret and click "Generate Secret"
 
 ![gen-secret](docs/globus-generate-secret.png)
 
-After clicking "Generate Secret" you will be presented with a screen showing
-you the secret. Copy this secret and save it in a secure location. You will not
-be able to see it again. No need to panic if you missed it. You can always
+After clicking "Generate Secret" you will be presented with a screen showing you
+the secret. Copy this secret and save it in a secure location. You will not be
+able to see it again. No need to panic if you missed it. You can always
 regenerate a new secret.
 
 We now have everything we need to implement the authorization flow.
@@ -69,30 +71,43 @@ Setup the development environment variables
 
 ```bash
 cp .env.dev .env
+cp oidc_providers.example.json oidc_providers.json
 ```
 
-This has three variables we need to edit:
+This has three parts we need to edit:
 
-```bash
-GLOBUS_CLIENT_ID=<client-id>
-GLOBUS_CLIENT_SECRET=<client-secret>
+**.env**
+```
 SESSION_SECRET_KEY=change-me-to-a-long-random-secret
 ```
 
-The `SESSION_SECRET_KEY` can be generated with the following command:
+`SESSION_SECRET_KEY` can be generated with the following command:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-The other two variables you get from your registered app:
+The `client_id` and `client_secret` portions of the globus provider in
+`oidc_providers.json`:
+
+**oidc_providers.json**
+```json
+{
+    "globus": {
+        "metadata_url": "https://auth.globus.org/.well-known/openid-configuration",
+        "client_id": "",
+        "client_secret": ""
+    }
+}
+```
+
+Thses values you get from the globus portal:
 
 ![project-vars](docs/project-vars-selection.png)
 
 > [!IMPORTANT]
-> The `GLOBUS_CLIENT_ID` is the value you copied and carefully kept track of
+> The `client_secret` is the value you copied and carefully kept track of
 > when you created the secret!
-
 
 ## Step 3: Run the app!
 
