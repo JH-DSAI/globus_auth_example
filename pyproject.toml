@@ -1,7 +1,7 @@
 [project]
 name = "globus-auth-example"
 version = "0.1.0"
-description = "Demonstation of an OAuth Process using Fast API"
+description = "Demonstration of an OAuth Process using Fast API"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
