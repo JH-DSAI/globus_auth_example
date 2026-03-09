@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import secrets
-import time
+from contextvars import ContextVar
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,6 +32,13 @@ app = FastAPI(title="Globus OAuth Login Prototype")
 # ==============================================================================
 # Configure OAuth Providers
 # ==============================================================================
+request_var: ContextVar[Request] = ContextVar("request")
+async def _update_token(name, token, refresh_token=None, access_token=None):
+    """Update the token in the session."""
+    request = request_var.get()
+    request.session[USER_TOKEN_KEY] = token
+
+
 with Path("oidc_providers.json").open() as f:
     oidc_providers = json.load(f)
 
@@ -90,32 +97,22 @@ async def auth_exception_handler(request: Request, e: HTTPException):
 
 async def get_current_user(request: Request) -> dict:
     """Helper for protecting routess that require authorization."""
-    # Are we currently logged in?
-    if not (token := request.session.get(USER_TOKEN_KEY)):
+    request_var.set(request)
+    token = request.session.get(USER_TOKEN_KEY)
+    if not token:
         raise HTTPException(status_code=401)
 
-    # check if token has expired or will expire within the next minute
-    expires_at = token.get("exp")
-    is_expired = expires_at and time.time() > expires_at - 60
+    provider = request.session.get(CURRENT_PROVIDER_KEY)
+    client = oauth.create_client(provider)
 
-    if is_expired:
-        try:
-            # get the current provider
-            provider = request.session.get(CURRENT_PROVIDER_KEY)
-            client = oauth.create_client(provider)
-
-            new_token = await client.refresh_token(
-                oauth._clients[provider].server_metadata_url["token_endpoint"],
-                refresh_token=token.get("refresh_token"),
-            )
-
-            request.session[USER_TOKEN_KEY] = new_token.get("userinfo")
-        except Exception:
-            request.session.clear()
-            raise HTTPException(status_code=401)
-
-    return token
-
+    try:
+        # It uses the 'update_token' callback to save the new credentials.
+        user = await client.userinfo(token=token)
+        return user
+    except Exception:
+        # If refresh fails (e.g., refresh token is revoked/expired), clear session
+        request.session.clear()
+        raise HTTPException(status_code=401)
 
 # ==============================================================================
 # Login/Logout routes
@@ -164,7 +161,7 @@ async def callback(request: Request) -> RedirectResponse:
             status_code=400, detail=f"CSRF Validation Failed: {e.error}"
         )
 
-    request.session[USER_TOKEN_KEY] = token.get("userinfo")
+    request.session[USER_TOKEN_KEY] = token
 
     return RedirectResponse(url="/")
 
@@ -182,10 +179,10 @@ def logout(request: Request) -> RedirectResponse:
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
     """Home page - shows the current login status."""
-    user_info = request.session.get(USER_TOKEN_KEY)
-    if user_info:
-        name = user_info.get("name") or user_info.get("preferred_username", "Unknown")
-        email = user_info.get("email", "")
+    token = request.session.get(USER_TOKEN_KEY)
+    if token and (userinfo := token.get("userinfo")):
+        name = userinfo.get("name") or userinfo.get("preferred_username", "Unknown")
+        email = userinfo.get("email", "")
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Globus Auth Example</title></head>
