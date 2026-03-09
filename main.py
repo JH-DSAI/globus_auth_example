@@ -5,7 +5,6 @@ import logging
 import os
 import secrets
 import time
-from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -116,24 +115,6 @@ async def get_current_user(request: Request) -> dict:
             raise HTTPException(status_code=401)
 
     return token
-
-
-@lru_cache
-def get_provider_details(metadata_url: str) -> dict:
-    """Return the details for a specific provider.
-
-    An example of the metadata url is:
-        https://auth.globus.org/.well-known/openid-configuration
-
-    Args:
-        metadata_url: The URL to the provider's OIDC metadata.
-
-    Returns:
-        A dictionary containing the provider's OIDC metadata.
-    """
-    resp = httpx.get(metadata_url)
-    resp.raise_for_status()
-    return resp.json()
 
 
 # ==============================================================================
