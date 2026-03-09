@@ -104,8 +104,12 @@ async def get_current_user(request: Request) -> dict:
             provider = request.session.get(CURRENT_PROVIDER_KEY)
             client = oauth.create_client(provider)
 
+            # Load server metadata to get the token endpoint in a supported way
+            metadata = await client.load_server_metadata()
+            token_endpoint = metadata["token_endpoint"]
+
             new_token = await client.refresh_token(
-                oauth._clients[provider].server_metadata_url["token_endpoint"],
+                token_endpoint,
                 refresh_token=token.get("refresh_token"),
             )
 
