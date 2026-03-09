@@ -243,7 +243,7 @@ def home(request: Request) -> HTMLResponse:
 # Protected routes
 # ==============================================================================
 @app.get("/profile", response_model=None)
-def profile(user_info=Depends(get_current_user)) -> JSONResponse:
+async def profile(user_info=Depends(get_current_user)) -> JSONResponse:
     """Protected route - returns the logged-in user's identity and token info."""
     return JSONResponse(
         {
