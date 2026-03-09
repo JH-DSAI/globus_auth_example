@@ -121,9 +121,7 @@ async def get_current_user(request: Request) -> dict:
 async def login(request: Request, provider: str) -> RedirectResponse:
     """Login with a specific provider."""
 
-    # if there isn't a provcider redirect to '/'
-    if not provider:
-        return RedirectResponse(url="/")
+    # FastAPI ensures that the provider path parameter is present and non-empty.
 
     if provider not in oidc_providers:
         raise HTTPException(
