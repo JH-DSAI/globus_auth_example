@@ -111,7 +111,9 @@ async def get_current_user(request: Request) -> dict:
     client = oauth.create_client(provider)
 
     try:
-        # It uses the 'update_token' callback to save the new credentials.
+        # Try to refresh the token if it's expired. If the provider doesn't
+        # support refresh tokens or the refresh token is invalid, this will
+        # raise an exception and we'll clear the session.
         user = await client.userinfo(token=token)
         return user
     except Exception:
