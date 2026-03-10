@@ -103,6 +103,9 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401)
 
     provider = request.session.get(CURRENT_PROVIDER_KEY)
+    if not provider:
+        raise HTTPException(status_code=401, detail="No provider found in session")
+
     client = oauth.create_client(provider)
 
     try:
