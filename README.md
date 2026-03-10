@@ -8,7 +8,7 @@ Auth](https://docs.globus.org/api/auth/).
 The app implements the [OAuth 2.0 Authorization Code flow](https://docs.globus.org/api/auth/developer-guide/#obtaining-authorization):
 
 1. **`GET /`** – Home page. Shows login status.
-2. **`GET /login/{proivder}`** – Redirects the browser to the provider's login.
+2. **`GET /login/{provider}`** – Redirects the browser to the provider's login.
 3. **`GET /callback`** – Handles the redirect from the provider's Auth.
 4. **`GET /profile`** – Protected route. Returns user identity and
    resource-server token metadata as JSON.
