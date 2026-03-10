@@ -33,6 +33,8 @@ app = FastAPI(title="Globus OAuth Login Prototype")
 # Configure OAuth Providers
 # ==============================================================================
 request_var: ContextVar[Request] = ContextVar("request")
+
+
 async def _update_token(name, token, refresh_token=None, access_token=None):
     """Update the token in the session."""
     request = request_var.get()
@@ -91,7 +93,7 @@ app.add_middleware(
 # ==============================================================================
 @app.exception_handler(HTTPException)
 async def auth_exception_handler(request: Request, e: HTTPException):
-    """Routes authorization exceptions to where login happens, otherwises reraise."""
+    """Routes authorization exceptions to where login happens, otherwise reraise."""
     if e.status_code == 401:
         return RedirectResponse(url="/")
     raise e
@@ -120,6 +122,7 @@ async def get_current_user(request: Request) -> dict:
         # If refresh fails (e.g., refresh token is revoked/expired), clear session
         request.session.clear()
         raise HTTPException(status_code=401)
+
 
 # ==============================================================================
 # Login/Logout routes
@@ -154,7 +157,7 @@ async def login(request: Request, provider: str) -> RedirectResponse:
 @app.get("/callback")
 async def callback(request: Request) -> RedirectResponse:
     """Callback for OIDC providers after authenticating."""
-    # Retrieve the name from the session
+    # Retrieve the provider from the session
     if not (provider := request.session.get(CURRENT_PROVIDER_KEY)):
         raise HTTPException(status_code=400, detail="No provider found in session")
 
@@ -162,9 +165,7 @@ async def callback(request: Request) -> RedirectResponse:
         # confirm access token using `state`
         token = await oauth.create_client(provider).authorize_access_token(request)
     except OAuthError as e:
-        raise HTTPException(
-            status_code=400, detail=f"CSRF Validation Failed: {e.error}"
-        )
+        raise HTTPException(status_code=400, detail=f"Authorization failed: {e.error}")
 
     request.session[USER_TOKEN_KEY] = token
 
@@ -174,7 +175,7 @@ async def callback(request: Request) -> RedirectResponse:
 @app.get("/logout")
 def logout(request: Request) -> RedirectResponse:
     """Remove the user's token from the session."""
-    request.session.pop(USER_TOKEN_KEY, None)
+    request.session.clear()
     return RedirectResponse(url="/")
 
 
