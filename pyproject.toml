@@ -1,12 +1,13 @@
 [project]
 name = "globus-auth-example"
 version = "0.1.0"
-description = "Add your description here"
+description = "Demonstration of an OAuth Process using FastAPI"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "authlib>=1.6.9",
     "fastapi==0.135.1",
-    "globus-sdk==4.4.1",
+    "httpx>=0.28.1",
     "itsdangerous>=2.2.0",
     "python-dotenv==1.2.2",
     "uvicorn[standard]==0.41.0",

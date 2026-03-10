@@ -1,0 +1,7 @@
+{
+    "globus": {
+        "metadata_url": "https://auth.globus.org/.well-known/openid-configuration",
+        "client_id": "",
+        "client_secret": ""
+    }
+}
