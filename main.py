@@ -98,7 +98,7 @@ async def auth_exception_handler(request: Request, e: HTTPException):
 
 
 async def get_current_user(request: Request) -> dict:
-    """Helper for protecting routess that require authorization."""
+    """Helper for protecting routes that require authorization."""
     request_var.set(request)
     token = request.session.get(USER_TOKEN_KEY)
     if not token:
