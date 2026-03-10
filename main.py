@@ -63,6 +63,7 @@ for provider in oidc_providers:
         client_kwargs={
             "scope": REQUESTED_SCOPES,
         },
+        update_token=_update_token,
     )
 
 # ==============================================================================
