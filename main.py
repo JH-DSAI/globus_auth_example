@@ -43,7 +43,7 @@ with Path("oidc_providers.json").open() as f:
     oidc_providers = json.load(f)
 
 oauth = OAuth()
-
+valid_providers = set()
 for provider in oidc_providers:
     if (
         not oidc_providers[provider]["client_id"]
@@ -54,6 +54,7 @@ for provider in oidc_providers:
         )
         continue
 
+    valid_providers.add(provider)
     oauth.register(
         name=provider,
         client_id=oidc_providers[provider]["client_id"],
@@ -126,7 +127,7 @@ async def login(request: Request, provider: str) -> RedirectResponse:
 
     # FastAPI ensures that the provider path parameter is present and non-empty.
 
-    if provider not in oidc_providers:
+    if provider not in valid_providers:
         raise HTTPException(
             status_code=400,
             detail=f"Unrecognized provider: {provider}",
@@ -208,7 +209,7 @@ def home(request: Request) -> HTMLResponse:
             + "\n".join(
                 [
                     f'<a href="/login/{p}"><button>Login with {p.capitalize()}</button></a>'
-                    for p in oidc_providers.keys()
+                    for p in valid_providers
                 ]
             )
             + """
