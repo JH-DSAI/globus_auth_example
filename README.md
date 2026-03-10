@@ -101,7 +101,7 @@ The `client_id` and `client_secret` portions of the globus provider in
 }
 ```
 
-Thses values you get from the globus portal:
+These values you get from the globus portal:
 
 ![project-vars](docs/project-vars-selection.png)
 
