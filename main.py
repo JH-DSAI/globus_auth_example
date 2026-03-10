@@ -92,7 +92,7 @@ async def auth_exception_handler(request: Request, e: HTTPException):
     """Routes authorization exceptions to where login happens, otherwises reraise."""
     if e.status_code == 401:
         return RedirectResponse(url="/")
-    return e
+    raise e
 
 
 async def get_current_user(request: Request) -> dict:
